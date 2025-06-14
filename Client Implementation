@@ -79,3 +79,15 @@ class UDPClient:
                         break
                     
                     start_byte = end + 1
+                    
+                    close_request = f"FILE {filename} CLOSE"
+                close_response = self.send_and_receive(close_request, server_data_address)
+                if not close_response or "CLOSE_OK" not in close_response:
+                    print(f"Failed to close file: {close_response}")
+                    return False
+                
+                print(f"\n{filename} downloaded successfully")
+                return True
+        except Exception as e:
+            print(f"Error downloading {filename}: {e}")
+            return False

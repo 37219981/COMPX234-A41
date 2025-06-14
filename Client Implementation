@@ -14,3 +14,24 @@ class UDPClient:
         self.client_socket.settimeout(1.0)  # Initial timeout in seconds
         self.max_retries = 5
         self.current_timeout = 1.0
+    def send_and_receive(self, message: str, address: Tuple[str, int]) -> Optional[str]:
+        """
+        Send a message and wait for a response, handling timeouts and retries.
+        Returns the response or None if failed after max retries.
+        """
+        retries = 0
+        while retries < self.max_retries:
+            try:
+                # Send the message
+                self.client_socket.sendto(message.encode(), address)
+                # Wait for response
+                data, _ = self.client_socket.recvfrom(4096)
+                response = data.decode().strip()
+                return response
+            except socket.timeout:
+                retries += 1
+                self.current_timeout *= 2  # Exponential backoff
+                self.client_socket.settimeout(self.current_timeout)
+                print(f"Timeout, retrying ({retries}/{self.max_retries}), timeout: {self.current_timeout}s")
+        print(f"Failed after {self.max_retries} retries")
+        return None

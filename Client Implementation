@@ -35,3 +35,8 @@ class UDPClient:
                 print(f"Timeout, retrying ({retries}/{self.max_retries}), timeout: {self.current_timeout}s")
         print(f"Failed after {self.max_retries} retries")
         return None
+    def download_file(self, filename: str, data_port: int) -> bool:
+        """Download a single file from the server using the given data port"""
+        print(f"Downloading {filename}...")
+        file_size = None
+        server_data_address = (self.server_host, data_port)

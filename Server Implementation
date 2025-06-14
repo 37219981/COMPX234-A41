@@ -47,3 +47,74 @@ class UDPServer:
                 print(f"Error sending OK response: {e}")
         else:
             print(f"Invalid request from {client_address}: {request}")
+
+    def handle_file_transmission(self, filename: str, client_address: Tuple[str, int], data_port: int):
+        """Handle data transmission for a specific client and file"""
+        try:
+            # Create new socket for data communication
+            data_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            data_socket.bind(('0.0.0.0', data_port))
+            data_socket.settimeout(5.0)  # Timeout for client inactivity
+            print(f"Data thread started for {filename}, port: {data_port}")
+            
+            # Open file for reading
+            with open(filename, 'rb') as f:
+                file_size = os.path.getsize(filename)
+                print(f"File {filename} opened, size: {file_size} bytes")
+                
+                # Loop to handle client data requests
+                while True:
+                    try:
+                        # Wait for client request
+                        request_data, _ = data_socket.recvfrom(4096)
+                        request = request_data.decode().strip()
+                        print(f"Received data request: {request} from {client_address}")
+                        
+                        parts = request.split()
+                        if len(parts) >= 6 and parts[0] == "FILE" and parts[1] == filename:
+                            if parts[2] == "GET":
+                                # Handle data GET request
+                                try:
+                                    start = int(parts[4])
+                                    end = int(parts[6])
+                                    
+                                    # Validate byte range
+                                    if start < 0 or end >= file_size or start > end:
+                                        print(f"Invalid byte range: {start}-{end}")
+                                        continue
+                                    
+                                    # Read requested data block
+                                    block_size = end - start + 1
+                                    f.seek(start)
+                                    file_data = f.read(block_size)
+                                    
+                                    # Encode data to Base64
+                                    base64_data = base64.b64encode(file_data).decode()
+                                    
+                                    # Create response
+                                    response = f"FILE {filename} OK START {start} END {end} DATA {base64_data}"
+                                    data_socket.sendto(response.encode(), client_address)
+                                    print(f"Sent data block {start}-{end} to {client_address}")
+                                except (ValueError, IndexError) as e:
+                                    print(f"Error processing GET request: {e}")
+                            elif parts[2] == "CLOSE":
+                                # Handle close request
+                                close_response = f"FILE {filename} CLOSE_OK"
+                                data_socket.sendto(close_response.encode(), client_address)
+                                print(f"Sent CLOSE_OK to {client_address}, closing thread for {filename}")
+                                break
+                        else:
+                            print(f"Invalid data request: {request}")
+                    except socket.timeout:
+                        # Timeout, assume client is done or disconnected
+                        print(f"Timeout waiting for client {client_address}, closing thread for {filename}")
+                        break
+        except Exception as e:
+            print(f"Error in data transmission thread for {filename}: {e}")
+        finally:
+            # Clean up
+            try:
+                data_socket.close()
+                print(f"Data socket closed for {filename}")
+            except:
+                pass

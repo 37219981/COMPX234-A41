@@ -118,3 +118,32 @@ class UDPServer:
                 print(f"Data socket closed for {filename}")
             except:
                 pass
+
+    def run(self):
+        """Run the server to listen for client requests"""
+        try:
+            while True:
+                # Wait for client requests
+                request_data, client_address = self.welcome_socket.recvfrom(4096)
+                request = request_data.decode().strip()
+                
+                # Handle request in a new thread to allow multiple clients
+                threading.Thread(
+                    target=self.handle_client_request,
+                    args=(request, client_address)
+                ).start()
+        except Exception as e:
+            print(f"Server error: {e}")
+        finally:
+            # Clean up
+            self.welcome_socket.close()
+            print("Server stopped")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python3 UDPserver.py <server_port>")
+        sys.exit(1)
+    
+    server_port = int(sys.argv[1])
+    server = UDPServer(server_port)
+    server.run()

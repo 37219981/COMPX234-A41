@@ -14,6 +14,7 @@ class UDPClient:
         self.client_socket.settimeout(1.0)  # Initial timeout in seconds
         self.max_retries = 5
         self.current_timeout = 1.0
+
     def send_and_receive(self, message: str, address: Tuple[str, int]) -> Optional[str]:
         """
         Send a message and wait for a response, handling timeouts and retries.
@@ -35,8 +36,14 @@ class UDPClient:
                 print(f"Timeout, retrying ({retries}/{self.max_retries}), timeout: {self.current_timeout}s")
         print(f"Failed after {self.max_retries} retries")
         return None
+    
     def download_file(self, filename: str, data_port: int) -> bool:
         """Download a single file from the server using the given data port"""
         print(f"Downloading {filename}...")
         file_size = None
         server_data_address = (self.server_host, data_port)
+
+        try:
+            with open(filename, 'wb') as f:
+                start_byte = 0
+                block_size = 1000

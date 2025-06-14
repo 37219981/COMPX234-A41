@@ -47,3 +47,6 @@ class UDPClient:
             with open(filename, 'wb') as f:
                 start_byte = 0
                 block_size = 1000
+                while True:
+                    end_byte = start_byte + block_size - 1
+                    request = f"FILE {filename} GET START {start_byte} END {end_byte}"

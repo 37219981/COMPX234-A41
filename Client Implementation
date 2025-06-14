@@ -50,3 +50,12 @@ class UDPClient:
                 while True:
                     end_byte = start_byte + block_size - 1
                     request = f"FILE {filename} GET START {start_byte} END {end_byte}"
+
+                    response = self.send_and_receive(request, server_data_address)
+                    if not response:
+                        return False
+                    
+                    parts = response.split()
+                    if parts[0] != "FILE" or parts[1] != filename or parts[2] != "OK":
+                        print(f"Invalid response: {response}")
+                        return False

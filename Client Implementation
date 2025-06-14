@@ -79,7 +79,7 @@ class UDPClient:
                         break
                     
                     start_byte = end + 1
-                    
+
                     close_request = f"FILE {filename} CLOSE"
                 close_response = self.send_and_receive(close_request, server_data_address)
                 if not close_response or "CLOSE_OK" not in close_response:
@@ -91,3 +91,63 @@ class UDPClient:
         except Exception as e:
             print(f"Error downloading {filename}: {e}")
             return False
+        
+    def run(self):
+        """Run the client to download files from the server"""
+        try:
+            # Read file list
+            with open(self.file_list, 'r') as f:
+                filenames = [line.strip() for line in f if line.strip()]
+            
+            if not filenames:
+                print("File list is empty")
+                return
+            
+            # Process each file in the list
+            for filename in filenames:
+                # Send DOWNLOAD request
+                download_request = f"DOWNLOAD {filename}"
+                server_address = (self.server_host, self.server_port)
+                response = self.send_and_receive(download_request, server_address)
+                
+                if not response:
+                    print(f"Failed to request {filename}")
+                    continue
+                
+                # Process response
+                parts = response.split()
+                if parts[0] == "OK" and parts[1] == filename:
+                    # Extract file size and data port
+                    try:
+                        size_index = parts.index("SIZE")
+                        port_index = parts.index("PORT")
+                        file_size = int(parts[size_index + 1])
+                        data_port = int(parts[port_index + 1])
+                        print(f"File {filename} found, size: {file_size} bytes, data port: {data_port}")
+                        
+                        # Download the file
+                        if not self.download_file(filename, data_port):
+                            print(f"Failed to download {filename}")
+                    except (ValueError, IndexError) as e:
+                        print(f"Invalid OK response: {response}, error: {e}")
+                elif parts[0] == "ERR" and parts[1] == filename and parts[2] == "NOT_FOUND":
+                    print(f"File {filename} not found on server")
+                else:
+                    print(f"Unknown response: {response}")
+        
+        except Exception as e:
+            print(f"Client error: {e}")
+        finally:
+            self.client_socket.close()
+
+if __name__ == "__main__":
+    if len(sys.argv) != 4:
+        print("Usage: python3 UDPclient.py <server_host> <server_port> <file_list>")
+        sys.exit(1)
+    
+    server_host = sys.argv[1]
+    server_port = int(sys.argv[2])
+    file_list = sys.argv[3]
+    
+    client = UDPClient(server_host, server_port, file_list)
+    client.run()

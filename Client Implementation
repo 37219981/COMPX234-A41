@@ -65,4 +65,17 @@ class UDPClient:
                     data_index = response.find("DATA") + 5
                     base64_data = response[data_index:].strip()
 
+                    try:
+                        file_data = base64.b64decode(base64_data)
+                    except Exception as e:
+                        print(f"Base64 decoding error: {e}")
+                        return False
                     
+                    f.seek(start)
+                    f.write(file_data)
+                    print("*", end="", flush=True)
+
+                    if end >= file_size - 1:
+                        break
+                    
+                    start_byte = end + 1
